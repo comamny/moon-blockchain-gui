@@ -31,7 +31,7 @@ export default deepmerge(greyTheme, {
       default: '#fafafa',
     },
     primary: {
-      main: '#3AAC59', // '#00C853',
+      main: '#6AAFF5', // '#4A90E2',
       contrastText: '#ffffff',
     },
     secondary: {
@@ -43,7 +43,7 @@ export default deepmerge(greyTheme, {
       contrastText: '#ffffff',
     },
     highlight: {
-      main: '#00C853',
+      main: '#4A90E2',
     },
     border: {
       main: '#E0E0E0',
@@ -54,8 +54,8 @@ export default deepmerge(greyTheme, {
       dark: '#505C4E',
     },
     sidebarIconSelected: {
-      main: '#1B5E20',
-      dark: '#3AAC59',
+      main: '#014770',
+      dark: '#6AAFF5',
     },
     sidebarIcon: {
       main: '#9E9E9E',
