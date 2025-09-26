@@ -50,8 +50,8 @@ export default deepmerge(greyTheme, {
       dark: '#484747',
     },
     sidebarBackground: {
-      main: '#E8F5E9',
-      dark: '#505C4E',
+      main: '#E8EAF5',
+      dark: '#4E505C',
     },
     sidebarIconSelected: {
       main: '#014770',
