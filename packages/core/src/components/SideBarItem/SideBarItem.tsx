@@ -31,7 +31,7 @@ const StyledListItemIcon = styled(ListItemIcon)`
     left: 0;
     width: 100%;
     height: 100%;
-    box-shadow: 0px -2px 4px rgba(104, 249, 127, 0.41), 0px 1px 8px rgba(145, 247, 53, 0.45);
+    box-shadow: 0px -2px 4px rgba(1, 71, 112, 1), 0px 1px 8px rgba(106, 175, 245, 1);
     opacity: 0;
     transition: opacity 0.3s ease-in-out;
   }
@@ -57,7 +57,7 @@ const StyledListItem = styled(ListItem)`
   }
 
   &:hover ${StyledListItemIcon} {
-    border-color: #4CAF50;
+    border-color: #4A90E2;
 
     svg {
       color: ${({ theme }) => useColorModeValue(theme, 'sidebarIconHover')} !important;
