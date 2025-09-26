@@ -31,7 +31,7 @@ const StyledListItemIcon = styled(ListItemIcon)`
     left: 0;
     width: 100%;
     height: 100%;
-    box-shadow: 0px -2px 4px rgba(1, 71, 112, 1), 0px 1px 8px rgba(106, 175, 245, 1);
+    box-shadow: 0px -2px 4px rgba(106, 175, 245, 1), 0px 1px 8px rgba(106, 175, 245, 1);
     opacity: 0;
     transition: opacity 0.3s ease-in-out;
   }
