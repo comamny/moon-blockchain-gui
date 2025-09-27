@@ -13,8 +13,11 @@ import { initialize } from '@electron/remote/main';
 import path from 'path';
 import React from 'react';
 import url from 'url';
+// import os from 'os';
+// import installExtension, { REDUX_DEVTOOLS, REACT_DEVELOPER_TOOLS } from 'electron-devtools-installer';
 import ReactDOMServer from 'react-dom/server';
 import { ServerStyleSheet, StyleSheetManager } from 'styled-components';
+// handle setupevents as quickly as possible
 import '../config/env';
 import handleSquirrelEvent from './handleSquirrelEvent';
 import loadConfig from '../util/loadConfig';
@@ -35,6 +38,7 @@ initialize();
 
 const appIcon = nativeImage.createFromPath(path.join(__dirname, AppIcon));
 
+// Set the userData directory to its location within MOON_ROOT/gui
 setUserDataDir();
 
 function renderAbout(): string {
@@ -50,7 +54,7 @@ function renderAbout(): string {
   );
 
   const tags = sheet.getStyleTags();
-  const result = about.replace('{{CSS}}', tags);
+  const result = about.replace('{{CSS}}', tags); // .replaceAll('/*!sc*/', ' ');
 
   sheet.seal();
 
@@ -80,10 +84,14 @@ function openAbout() {
   });
 
   aboutWindow.setMenu(null);
+
   openedWindows.add(aboutWindow);
+
+  // aboutWindow.webContents.openDevTools({ mode: 'detach' });
 }
 
 if (!handleSquirrelEvent()) {
+  // squirrel event handled and app will exit in 1000ms, so don't do anything else
   const ensureSingleInstance = () => {
     const gotTheLock = app.requestSingleInstanceLock();
 
@@ -92,6 +100,7 @@ if (!handleSquirrelEvent()) {
       return false;
     }
     app.on('second-instance', (event, commandLine, workingDirectory) => {
+      // Someone tried to run a second instance, we should focus our window.
       if (mainWindow) {
         if (mainWindow.isMinimized()) {
           mainWindow.restore();
@@ -104,10 +113,12 @@ if (!handleSquirrelEvent()) {
   };
 
   const ensureCorrectEnvironment = () => {
+    // check that the app is either packaged or running in the python venv
     if (!moonEnvironment.guessPackaged() && !('VIRTUAL_ENV' in process.env)) {
       app.quit();
       return false;
     }
+
     return true;
   };
 
@@ -115,11 +126,15 @@ if (!handleSquirrelEvent()) {
 
   const createMenu = () => Menu.buildFromTemplate(getMenuTemplate());
 
+  // if any of these checks return false, don't do any other initialization since the app is quitting
   if (ensureSingleInstance() && ensureCorrectEnvironment()) {
     const exitPyProc = (e) => {};
 
     app.on('will-quit', exitPyProc);
 
+    /** ***********************************************************
+     * window management
+     ************************************************************ */
     let decidedToClose = false;
     let isClosing = false;
 
@@ -129,7 +144,9 @@ if (!handleSquirrelEvent()) {
       }
 
       ipcMain.handle('getConfig', () => loadConfig(NET));
+
       ipcMain.handle('getTempDir', () => app.getPath('temp'));
+
       ipcMain.handle('getVersion', () => app.getVersion());
 
       ipcMain.handle(
@@ -154,6 +171,7 @@ if (!handleSquirrelEvent()) {
 
                 response.on('data', (chunk) => {
                   const body = chunk.toString('utf8');
+
                   resolve(body);
                 });
 
@@ -220,6 +238,7 @@ if (!handleSquirrelEvent()) {
                   }
 
                   if (contentType) {
+                    // extract charset from contentType
                     const charsetMatch = contentType.match(/charset=([^;]+)/);
                     if (charsetMatch) {
                       encoding = charsetMatch[1];
@@ -229,6 +248,7 @@ if (!handleSquirrelEvent()) {
 
                 response.on('data', (chunk) => {
                   buffers.push(chunk);
+
                   totalLength += chunk.byteLength;
 
                   if (totalLength > maxSize) {
@@ -282,47 +302,11 @@ if (!handleSquirrelEvent()) {
         return await mainWindow.webContents.downloadURL(options.url);
       });
 
-      // اضافه کردن هندلر برای کنترل دکمه‌های پنجره
-      ipcMain.on('window-control', (event, action) => {
-        if (!mainWindow) return;
-
-        switch (action) {
-          case 'minimize':
-            mainWindow.minimize();
-            break;
-          case 'maximize':
-            if (mainWindow.isMaximized()) {
-              mainWindow.unmaximize();
-            } else {
-              mainWindow.maximize();
-            }
-            break;
-          case 'close':
-            if (decidedToClose || !manageDaemonLifetime(NET)) {
-              mainWindow.close();
-            } else {
-              const choice = dialog.showMessageBoxSync(mainWindow, {
-                type: 'question',
-                buttons: ['No', 'Yes'],
-                title: 'Confirm',
-                message: 'Are you sure you want to quit?',
-              });
-              if (choice === 1) {
-                decidedToClose = true;
-                mainWindow.webContents.send('exit-daemon');
-              }
-            }
-            break;
-        }
-      });
-
       decidedToClose = false;
       const mainWindowState = windowStateKeeper({
         defaultWidth: 1200,
         defaultHeight: 1200,
       });
-      
-      // تغییرات اصلی: اضافه کردن frame: false و titleBarStyle
       mainWindow = new BrowserWindow({
         x: mainWindowState.x,
         y: mainWindowState.y,
@@ -332,8 +316,6 @@ if (!handleSquirrelEvent()) {
         minHeight: 500,
         backgroundColor: '#ffffff',
         show: false,
-        frame: false, // حذف فریم پیش‌فرض
-        titleBarStyle: 'hidden', // عنوان بار مخفی
         webPreferences: {
           preload: `${__dirname}/preload.js`,
           nodeIntegration: true,
@@ -352,6 +334,7 @@ if (!handleSquirrelEvent()) {
         mainWindow.show();
       });
 
+      // don't show remote daeomn detials in the title bar
       if (!manageDaemonLifetime(NET)) {
         mainWindow.webContents.on('did-finish-load', async () => {
           const { url } = await loadConfig(NET);
@@ -360,8 +343,12 @@ if (!handleSquirrelEvent()) {
           }
         });
       }
-
+      // Uncomment this to open devtools by default
+      // if (!guessPackaged()) {
+      //   mainWindow.webContents.openDevTools();
+      // }
       mainWindow.on('close', (e) => {
+        // if the daemon isn't local we aren't going to try to start/stop it
         if (decidedToClose || !manageDaemonLifetime(NET)) {
           return;
         }
@@ -388,12 +375,14 @@ if (!handleSquirrelEvent()) {
           isClosing = false;
           decidedToClose = true;
           mainWindow.webContents.send('exit-daemon');
+          // save the window state and unmange so we don't restore the mini exiting state
           mainWindowState.saveState(mainWindow);
           mainWindowState.unmanage(mainWindow);
           mainWindow.setBounds({ height: 500, width: 500 });
           mainWindow.center();
           ipcMain.on('daemon-exited', (event, args) => {
             mainWindow.close();
+
             openedWindows.forEach((win) => win.close());
           });
         }
@@ -501,6 +490,12 @@ if (!handleSquirrelEvent()) {
                     : 'Ctrl+Shift+I',
                 click: () => mainWindow.toggleDevTools(),
               },
+              //{
+              //label: isSimulator
+              //  ? i18n._(/* i18n */ { id: 'Disable Simulator' })
+              //   : i18n._(/* i18n */ { id: 'Enable Simulator' }),
+              // click: () => toggleSimulatorMode(),
+              //},
             ],
           },
           {
@@ -604,6 +599,7 @@ if (!handleSquirrelEvent()) {
     ];
 
     if (process.platform === 'darwin') {
+      // Moon Blockchain menu (Mac)
       template.unshift({
         label: i18n._(/* i18n */ { id: 'Moon' }),
         submenu: [
@@ -640,6 +636,7 @@ if (!handleSquirrelEvent()) {
         ],
       });
 
+      // File menu (MacOS)
       template.splice(1, 1, {
         label: i18n._(/* i18n */ { id: 'File' }),
         submenu: [
@@ -649,6 +646,7 @@ if (!handleSquirrelEvent()) {
         ],
       });
 
+      // Edit menu (MacOS)
       template[2].submenu.push(
         {
           type: 'separator',
@@ -666,6 +664,7 @@ if (!handleSquirrelEvent()) {
         },
       );
 
+      // Window menu (MacOS)
       template.splice(4, 1, {
         role: 'window',
         submenu: [
@@ -686,6 +685,7 @@ if (!handleSquirrelEvent()) {
     }
 
     if (process.platform === 'linux' || process.platform === 'win32') {
+      // Help menu (Windows, Linux)
       template[4].submenu.push(
         {
           type: 'separator',
@@ -702,7 +702,11 @@ if (!handleSquirrelEvent()) {
     return template;
   };
 
+  /**
+   * Open the given external protocol URL in the desktop’s default manner.
+   */
   const openExternal = (url) => {
+    // console.log(`openExternal: ${url}`)
     shell.openExternal(url);
   };
 }
