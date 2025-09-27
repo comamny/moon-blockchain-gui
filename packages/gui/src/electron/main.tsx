@@ -317,8 +317,8 @@ mainWindow = new BrowserWindow({
   backgroundColor: '#ffffff',
   show: false,
   titleBarOverlay: {
-    color: '#ffffff',
-    symbolColor: '#666666',
+    color: '#F44336',
+    symbolColor: '#F44336',
     height: 30,
   },
   webPreferences: {
