@@ -302,6 +302,25 @@ if (!handleSquirrelEvent()) {
         return await mainWindow.webContents.downloadURL(options.url);
       });
 
+      // اضافه کردن IPC handlers برای کنترل پنجره
+      ipcMain.on('window-minimize', () => {
+        if (mainWindow) mainWindow.minimize();
+      });
+
+      ipcMain.on('window-maximize', () => {
+        if (mainWindow) {
+          if (mainWindow.isMaximized()) {
+            mainWindow.unmaximize();
+          } else {
+            mainWindow.maximize();
+          }
+        }
+      });
+
+      ipcMain.on('window-close', () => {
+        if (mainWindow) mainWindow.close();
+      });
+
       decidedToClose = false;
       const mainWindowState = windowStateKeeper({
         defaultWidth: 1200,
@@ -316,6 +335,8 @@ if (!handleSquirrelEvent()) {
         minHeight: 500,
         backgroundColor: '#ffffff',
         show: false,
+        frame: false, // غیرفعال کردن frame پیش‌فرض
+        titleBarStyle: 'hidden',
         webPreferences: {
           preload: `${__dirname}/preload.js`,
           nodeIntegration: true,
@@ -332,6 +353,99 @@ if (!handleSquirrelEvent()) {
 
       mainWindow.once('ready-to-show', () => {
         mainWindow.show();
+      });
+
+      // تزریق CSS و JavaScript برای custom title bar
+      mainWindow.webContents.on('did-finish-load', () => {
+        // تزریق CSS
+        mainWindow.webContents.insertCSS(`
+          .custom-title-bar {
+            height: 30px;
+            background: #f0f0f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 15px;
+            color: #333;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            -webkit-app-region: drag;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 10000;
+            border-bottom: 1px solid #ddd;
+          }
+          
+          .window-title {
+            font-size: 13px;
+            font-weight: 500;
+          }
+          
+          .window-controls {
+            display: flex;
+            gap: 8px;
+            -webkit-app-region: no-drag;
+          }
+          
+          .window-btn {
+            width: 22px;
+            height: 22px;
+            border-radius: 3px;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: normal;
+            transition: all 0.2s ease;
+            background: transparent;
+            color: #666;
+          }
+          
+          .window-btn:hover {
+            background: #e0e0e0;
+            color: #333;
+          }
+          
+          .window-btn.close:hover {
+            background: #e81123 !important;
+            color: white !important;
+          }
+          
+          body {
+            padding-top: 30px !important;
+          }
+        `);
+
+        // تزریق HTML و JavaScript
+        mainWindow.webContents.executeJavaScript(`
+          const titleBar = document.createElement('div');
+          titleBar.className = 'custom-title-bar';
+          titleBar.innerHTML = '
+            <span class="window-title">Moon Blockchain</span>
+            <div class="window-controls">
+              <button class="window-btn minimize" title="Minimize">−</button>
+              <button class="window-btn maximize" title="Maximize">□</button>
+              <button class="window-btn close" title="Close">×</button>
+            </div>
+          ';
+          
+          document.body.prepend(titleBar);
+          
+          document.querySelector('.window-btn.minimize').addEventListener('click', () => {
+            require('electron').ipcRenderer.send('window-minimize');
+          });
+          
+          document.querySelector('.window-btn.maximize').addEventListener('click', () => {
+            require('electron').ipcRenderer.send('window-maximize');
+          });
+          
+          document.querySelector('.window-btn.close').addEventListener('click', () => {
+            require('electron').ipcRenderer.send('window-close');
+          });
+        `);
       });
 
       // don't show remote daeomn detials in the title bar
