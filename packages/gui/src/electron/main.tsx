@@ -303,26 +303,31 @@ if (!handleSquirrelEvent()) {
       });
 
       decidedToClose = false;
-      const mainWindowState = windowStateKeeper({
-        defaultWidth: 1200,
-        defaultHeight: 1200,
-      });
-      mainWindow = new BrowserWindow({
-        x: mainWindowState.x,
-        y: mainWindowState.y,
-        width: mainWindowState.width,
-        height: mainWindowState.height,
-        minWidth: 500,
-        minHeight: 500,
-        backgroundColor: '#ffffff',
-        show: false,
-        webPreferences: {
-          preload: `${__dirname}/preload.js`,
-          nodeIntegration: true,
-          contextIsolation: false,
-          nativeWindowOpen: true,
-        },
-      });
+const mainWindowState = windowStateKeeper({
+  defaultWidth: 1200,
+  defaultHeight: 1200,
+});
+mainWindow = new BrowserWindow({
+  x: mainWindowState.x,
+  y: mainWindowState.y,
+  width: mainWindowState.width,
+  height: mainWindowState.height,
+  minWidth: 500,
+  minHeight: 500,
+  backgroundColor: '#ffffff',
+  show: false,
+  titleBarOverlay: {
+    color: '#ffffff',
+    symbolColor: '#666666',
+    height: 30,
+  },
+  webPreferences: {
+    preload: `${__dirname}/preload.js`,
+    nodeIntegration: true,
+    contextIsolation: false,
+    nativeWindowOpen: true,
+  },
+});
 
       mainWindowState.manage(mainWindow);
 
